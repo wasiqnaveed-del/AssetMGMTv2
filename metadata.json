@@ -1,0 +1,6 @@
+{
+  "name": "AssetOps",
+  "description": "Lightweight, scalable asset management system to track critical assets, manage lifecycle events, oversee financials, and scanning QR codes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
