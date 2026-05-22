@@ -875,7 +875,7 @@ export default function AssetsTab({ state, role, onSaveAsset }: AssetsTabProps) 
 
                 {/* Status */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Operational Health Status *</label>
+                  <label className="text-xs font-bold text-slate-600">Status *</label>
                   <select
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value as any)}
