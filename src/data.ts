@@ -665,7 +665,7 @@ function normalizeHeader(h) {
   var lowerClean = cleanHeader.toLowerCase();
   
   // Assets
-  if (lowerClean === "assetid" || lowerClean === "asset_id" || lowerClean === "id" || lowerClean === "asset") return "Asset_ID";
+  if (lowerClean === "assetid" || lowerClean === "asset_id" || lowerClean === "id" || lowerClean === "asset" || lowerClean === "asset_#" || lowerClean === "asset#" || lowerClean === "asset_no" || lowerClean === "asset_no_" || lowerClean === "assetno" || lowerClean === "assetnumber" || lowerClean === "asset_number" || lowerClean === "assettag" || lowerClean === "asset_tag" || lowerClean === "tag" || lowerClean === "assetnum" || lowerClean === "asset_num" || lowerClean === "assetno_") return "Asset_ID";
   if (lowerClean === "name" || lowerClean === "asset_name") return "Name";
   if (lowerClean === "category") return "Category";
   if (lowerClean === "subcategory" || lowerClean === "sub_category") return "Sub_Category";
@@ -687,7 +687,7 @@ function normalizeHeader(h) {
   if (lowerClean === "serialno" || lowerClean === "serial_no" || lowerClean === "serial" || lowerClean === "serialnumber") return "Serial_No";
   if (lowerClean === "photourl" || lowerClean === "photo_url" || lowerClean === "photo") return "Photo_URL";
   if (lowerClean === "drivedocurl" || lowerClean === "drive_doc_url" || lowerClean === "document" || lowerClean === "manual_url" || lowerClean === "manual") return "Drive_Doc_URL";
-  if (lowerClean === "commissioneddate" || lowerClean === "commissioned_date" || lowerClean === "commission_date") return "Commissioned_Date";
+  if (lowerClean === "commissioneddate" || lowerClean === "commissioned_date" || lowerClean === "commission_date" || lowerClean === "commissioningdate" || lowerClean === "commissioning_date" || lowerClean === "commissioningdata" || lowerClean === "commissioning_data" || lowerClean === "commissiondate") return "Commissioned_Date";
   if (lowerClean === "decommissioneddate" || lowerClean === "decommissioned_date") return "Decommissioned_Date";
   if (lowerClean === "notes" || lowerClean === "note") return "Notes";
   if (lowerClean === "lastmodifiedby" || lowerClean === "last_modified_by") return "Last_Modified_By";

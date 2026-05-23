@@ -113,10 +113,22 @@ export default function MobileScanView({ assetId, token, api }: MobileScanViewPr
     );
   }
 
+  const rawStatus = String(assetDetails.Status || 'Active').trim();
+  
+  // Normalize common statuses to capitalize nicely
+  let displayStatus = rawStatus;
+  if (rawStatus.toLowerCase() === 'active') displayStatus = 'Active';
+  else if (rawStatus.toLowerCase() === 'under maintenance' || rawStatus.toLowerCase() === 'undermaintenance') displayStatus = 'Under Maintenance';
+  else if (rawStatus.toLowerCase() === 'broken') displayStatus = 'Broken';
+  else if (rawStatus.toLowerCase() === 'in storage' || rawStatus.toLowerCase() === 'instorage') displayStatus = 'In Storage';
+  else if (rawStatus.toLowerCase() === 'decommissioned') displayStatus = 'Decommissioned';
+
   let statusBadgeStyle = 'bg-slate-50 text-slate-600 border-slate-200';
-  if (assetDetails.Status === 'Active') statusBadgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-100';
-  if (assetDetails.Status === 'Under Maintenance') statusBadgeStyle = 'bg-amber-50 text-amber-700 border-amber-100';
-  if (assetDetails.Status === 'Broken') statusBadgeStyle = 'bg-red-50 text-red-700 border-red-100 animate-pulse';
+  if (displayStatus === 'Active') statusBadgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  else if (displayStatus === 'Under Maintenance') statusBadgeStyle = 'bg-amber-50 text-amber-700 border-amber-100';
+  else if (displayStatus === 'Broken') statusBadgeStyle = 'bg-red-50 text-red-700 border-red-100 animate-pulse';
+  else if (displayStatus === 'In Storage') statusBadgeStyle = 'bg-blue-50 text-blue-700 border-blue-100';
+  else if (displayStatus === 'Decommissioned') statusBadgeStyle = 'bg-slate-100 text-slate-500 border-slate-200';
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-12 flex flex-col items-center" id="mobile-scan-dashboard">
@@ -136,7 +148,7 @@ export default function MobileScanView({ assetId, token, api }: MobileScanViewPr
         <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
           <div className="aspect-video relative w-full bg-slate-100">
             <img 
-              src={assetDetails.Photo_URL} 
+              src={assetDetails.Photo_URL || undefined} 
               alt={assetDetails.Name} 
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
@@ -157,7 +169,7 @@ export default function MobileScanView({ assetId, token, api }: MobileScanViewPr
             <div className="flex items-center justify-between border-t border-b border-slate-50 py-3">
               <span className="text-xs font-semibold text-slate-500">Asset Fitness Status:</span>
               <span className={`px-3 py-1 text-xs font-extrabold rounded-full border ${statusBadgeStyle}`}>
-                {assetDetails.Status.toUpperCase()}
+                {displayStatus.toUpperCase()}
               </span>
             </div>
 

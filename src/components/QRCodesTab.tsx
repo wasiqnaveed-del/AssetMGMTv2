@@ -29,6 +29,7 @@ export default function QRCodesTab({ state, role, onAddQRRegistry }: QRCodesTabP
   // Form states
   const [formAssetId, setFormAssetId] = useState('');
   const [formTokenCode, setFormTokenCode] = useState('');
+  const [formQrId, setFormQrId] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Host/app origin to build scanning URLs
@@ -67,7 +68,7 @@ export default function QRCodesTab({ state, role, onAddQRRegistry }: QRCodesTabP
     const scanUrl = `${appOrigin}?token=${generatedToken}&assetId=${formAssetId}`;
 
     const newRow: QRRegistry = {
-      QR_ID: `QR-${Math.floor(450 + Math.random() * 100)}`,
+      QR_ID: formQrId || `QR-${Math.floor(450 + Math.random() * 100)}`,
       Asset_ID: formAssetId,
       Token: generatedToken,
       Full_URL: scanUrl,
@@ -204,11 +205,11 @@ export default function QRCodesTab({ state, role, onAddQRRegistry }: QRCodesTabP
 
             {/* Quick multi-selector box */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-6 border-t border-slate-50 pt-6">
-              {state.assets.map(asset => {
+              {state.assets.map((asset, index) => {
                 const isChecked = selectedAssetIds.includes(asset.Asset_ID);
                 return (
                   <div
-                    key={`select-item-${asset.Asset_ID}`}
+                    key={`select-item-${asset.Asset_ID || index}`}
                     onClick={() => handleToggleSelectAsset(asset.Asset_ID)}
                     className={`p-3 rounded-xl border text-xs cursor-pointer flex flex-col justify-between h-20 transition-all select-none hover:shadow-2xs ${
                       isChecked
@@ -241,7 +242,11 @@ export default function QRCodesTab({ state, role, onAddQRRegistry }: QRCodesTabP
 
               {role === 'Admin' && (
                 <button
-                  onClick={() => { setSubmitError(null); setIsRegisterOpen(true); }}
+                  onClick={() => { 
+                    setSubmitError(null); 
+                    setFormQrId(`QR-${Math.floor(450 + Math.random() * 100)}`);
+                    setIsRegisterOpen(true); 
+                  }}
                   id="btn-register-qr-token"
                   className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
                 >
@@ -349,6 +354,17 @@ export default function QRCodesTab({ state, role, onAddQRRegistry }: QRCodesTabP
 
               {/* Configure elements */}
               <div className="space-y-4 text-xs">
+                {/* ID */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Generated Registry Entry ID</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={formQrId}
+                    className="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-700 cursor-not-allowed opacity-100"
+                  />
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-600">Secure Asset Source ID *</label>
                   <select
@@ -358,8 +374,8 @@ export default function QRCodesTab({ state, role, onAddQRRegistry }: QRCodesTabP
                     className="w-full p-2 border border-slate-200 rounded-lg font-mono font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     <option value="">-- Choose Asset from Master Database --</option>
-                    {state.assets.map(a => (
-                      <option key={a.Asset_ID} value={a.Asset_ID}>
+                    {state.assets.map((a, idx) => (
+                      <option key={a.Asset_ID || `asset-opt-${idx}`} value={a.Asset_ID}>
                         {a.Asset_ID} - {a.Name}
                       </option>
                     ))}

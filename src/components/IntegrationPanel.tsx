@@ -10,7 +10,9 @@ import {
   CheckCircle,
   Database,
   RefreshCw,
-  Info
+  Info,
+  Key,
+  Lock
 } from 'lucide-react';
 
 interface IntegrationPanelProps {
@@ -22,6 +24,50 @@ export default function IntegrationPanel({ onConfigChanged }: IntegrationPanelPr
   const [isCopied, setIsCopied] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [testResult, setTestResult] = useState<{ status: 'success' | 'error' | null; msg: string }>({ status: null, msg: '' });
+
+  // Security credentials state
+  const [adminUsername, setAdminUsername] = useState(
+    typeof window !== 'undefined' ? localStorage.getItem('assetops_admin_username') || 'admin' : 'admin'
+  );
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [securitySuccess, setSecuritySuccess] = useState('');
+  const [securityError, setSecurityError] = useState('');
+
+  const handleSecuritySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecurityError('');
+    setSecuritySuccess('');
+
+    const trimmedUser = adminUsername.trim();
+    const trimmedPass = newPassword.trim();
+
+    if (!trimmedUser) {
+      setSecurityError('Username cannot be empty.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setSecurityError('New password and confirm password do not match.');
+      return;
+    }
+
+    if (trimmedPass.length < 4) {
+      setSecurityError('Security passcode must be at least 4 characters long.');
+      return;
+    }
+
+    // Persist custom admin credentials in browser standard Storage
+    localStorage.setItem('assetops_admin_username', trimmedUser);
+    localStorage.setItem('assetops_admin_password', trimmedPass);
+    
+    setSecuritySuccess('Administrator security credentials updated successfully!');
+    setNewPassword('');
+    setConfirmPassword('');
+    
+    // Notify master application component
+    onConfigChanged();
+  };
 
   const handleSave = (newConfig: APIConfig) => {
     saveAPIConfig(newConfig);
@@ -234,6 +280,85 @@ export default function IntegrationPanel({ onConfigChanged }: IntegrationPanelPr
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Administrator Credentials & Security Panel */}
+      <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs space-y-4 animate-in fade-in" id="security-passcode-panel">
+        <div className="flex justify-between items-center pb-2 border-b border-slate-50">
+          <div className="flex items-center gap-2">
+            <Key className="h-4 w-4 text-indigo-600" />
+            <h4 className="text-sm font-bold text-slate-800">System Security Administrator Credentials</h4>
+          </div>
+          <span className="px-2 py-0.5 text-[9px] font-bold rounded-md bg-indigo-50 text-indigo-700 uppercase tracking-wider">
+            Privilege Level: Admin
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-500 leading-normal max-w-xl">
+          Change standard administrator login credentials (<strong className="font-mono text-slate-700">admin</strong> / <strong className="font-mono text-slate-700">admin123</strong>) to protect database panels and GSheets integration tunnels.
+        </p>
+
+        <form onSubmit={handleSecuritySubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-medium">
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-650 block">Administrator Username</label>
+              <input
+                type="text"
+                required
+                value={adminUsername}
+                onChange={(e) => setAdminUsername(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold"
+                placeholder="default: admin"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-650 block">New Access Passcode</label>
+              <input
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-slate-800"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-650 block">Confirm New Passcode</label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-slate-800"
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+
+          {securityError && (
+            <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-700 font-semibold" id="security-error-msg">
+              ⚠️ {securityError}
+            </div>
+          )}
+
+          {securitySuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-xs text-emerald-800 font-semibold" id="security-success-msg">
+              🎉 {securitySuccess}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-1">
+            <button
+              type="submit"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              Update Credentials passcode
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Copy-Paste Script Template block */}

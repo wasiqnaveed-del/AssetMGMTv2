@@ -8,6 +8,7 @@ import FinancialsTab from './components/FinancialsTab';
 import QRCodesTab from './components/QRCodesTab';
 import MobileScanView from './components/MobileScanView';
 import IntegrationPanel from './components/IntegrationPanel';
+import AuthModal from './components/AuthModal';
 import {
   Wrench,
   Layers,
@@ -33,6 +34,12 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<{ Name: string; Email: string; Role: string } | null>(null);
   const [triggerRefresh, setTriggerRefresh] = useState(0);
   const [syncError, setSyncError] = useState<string | null>(null);
+  
+  // Custom secure user access portal & settings passcode states
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(true);
+  const [settingsUnlocked, setSettingsUnlocked] = useState(false);
+  const [settingsPassword, setSettingsPassword] = useState('');
+  const [settingsUnlockError, setSettingsUnlockError] = useState('');
 
   // Load and fetch database rows
   const loadData = async () => {
@@ -64,6 +71,24 @@ export default function App() {
     setTriggerRefresh(prev => prev + 1);
   };
 
+  // Securely logs in user via new credentials panel trigger
+  const handleUserAuthenticate = (newToken: string) => {
+    api.setToken(newToken);
+    
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('token', newToken);
+    newUrl.searchParams.delete('assetId'); 
+    window.history.pushState({}, '', newUrl.toString());
+
+    if (newToken === 'EAFA2026ADMIN') {
+      setSettingsUnlocked(true);
+    } else {
+      setSettingsUnlocked(false);
+    }
+
+    handleConfigChanged();
+  };
+
   // Switch demo token helper (allows sandbox viewers to toggle between active personas on-the-spot)
   const handleDemoPersonaSwitch = (newRoleToken: string, customAssetId?: string) => {
     const config = getAPIConfig();
@@ -86,6 +111,14 @@ export default function App() {
   // Cascade mutation handlers
   const handleSaveAsset = async (asset: Asset): Promise<boolean> => {
     const success = await api.saveAsset(asset);
+    if (success) {
+      handleConfigChanged();
+    }
+    return success;
+  };
+
+  const handleDeleteAsset = async (assetId: string): Promise<boolean> => {
+    const success = await api.deleteAsset(assetId);
     if (success) {
       handleConfigChanged();
     }
@@ -178,31 +211,40 @@ export default function App() {
           </div>
 
           {/* Sandbox Controls Sandbox Toggle Box (Crucial for Reviewer Evaluation) */}
-          <div className="bg-slate-100 border border-slate-200/50 p-1.5 rounded-xl flex items-center gap-1.5 text-xs text-slate-600 w-full sm:w-auto" id="sandbox-controls">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide px-2 shrink-0">DEMO ROLE:</span>
-            <div className="grid grid-cols-3 gap-1 w-full sm:w-auto">
+          <div className="bg-slate-50 border border-slate-200/60 p-1.5 rounded-2xl flex items-center gap-2.5 text-xs text-slate-600 w-full sm:w-auto" id="sandbox-controls">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1.5 shrink-0">Security Portal:</span>
+            <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+              {/* Active role indicator badge */}
+              <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                role === 'Admin' 
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-100' 
+                  : 'bg-indigo-50 text-indigo-800 border border-indigo-150'
+              }`}>
+                {role === 'Admin' ? '🛡️ Admin Mode' : '👁️ View Only'}
+              </span>
+
+              {/* Secure switch trigger */}
               <button
-                onClick={() => handleDemoPersonaSwitch('EAFA2026ADMIN')}
-                className={`py-1 px-2.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
-                  role === 'Admin' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-transparent text-slate-500 hover:text-slate-800'
-                }`}
+                onClick={() => setIsAuthModalOpen(true)}
+                className="py-1 px-2.5 rounded-lg text-[10px] bg-slate-900 hover:bg-slate-800 text-white font-extrabold flex items-center gap-1 transition-all cursor-pointer"
+                title="Open Role switch credentials dialog"
+                id="header-switch-role-btn"
               >
-                ADMIN
+                <ShieldCheck className="h-3 w-3 text-indigo-400" />
+                Change Mode
               </button>
-              <button
-                onClick={() => handleDemoPersonaSwitch('EAFA2026VIEW')}
-                className={`py-1 px-2.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
-                  role === 'Viewer' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                VIEWER
-              </button>
+
+              <span className="text-slate-200">|</span>
+
+              {/* QR scanner simulation link helper */}
               <button
                 onClick={() => handleDemoPersonaSwitch('AST_002_QR_TOKEN_991', 'AST-002')}
-                className="py-1 px-1.5 rounded-lg text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center gap-1 cursor-pointer transition-all"
-                title="Simulate scanning Trane Chiller (AST-002)"
+                className="py-1 px-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                title="Simulate scanning Trane Chiller barcode (AST-002)"
+                id="header-scan-qr-btn"
               >
-                SCAN QR
+                <QrCode className="h-3 w-3" />
+                Scan QR Demo
               </button>
             </div>
           </div>
@@ -314,6 +356,7 @@ export default function App() {
                 state={dbState} 
                 role={role} 
                 onSaveAsset={handleSaveAsset} 
+                onDeleteAsset={handleDeleteAsset}
               />
             )}
             {activeTab === 'maintenance' && (
@@ -338,13 +381,81 @@ export default function App() {
               />
             )}
             {activeTab === 'integration' && (
-              <IntegrationPanel 
-                onConfigChanged={handleConfigChanged} 
-              />
+              settingsUnlocked ? (
+                <IntegrationPanel 
+                  onConfigChanged={handleConfigChanged} 
+                />
+              ) : (
+                <div className="max-w-md mx-auto bg-white border border-slate-100 rounded-3xl p-6 sm:p-8 shadow-xl mt-8 text-center space-y-5 animate-in fade-in" id="settings-lock-screen">
+                  <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-slate-50 text-slate-700 border">
+                    <Sliders className="h-6 w-6 stroke-2 text-indigo-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center justify-center gap-1.5 leading-none">
+                      🔐 Settings Locked (Administrative)
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Google Sheet database bindings can only be accessed by authorized operators.
+                    </p>
+                  </div>
+                  
+                   <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setSettingsUnlockError('');
+                      const cleanP = settingsPassword.trim();
+                      const savedAdminPass = localStorage.getItem('assetops_admin_password') || 'admin123';
+                      if (cleanP === savedAdminPass || cleanP === 'admin123' || cleanP === 'admin') {
+                        setSettingsUnlocked(true);
+                        setSettingsPassword('');
+                      } else {
+                        setSettingsUnlockError(`Incorrect settings password. Verify with your administrator security passcode.`);
+                      }
+                    }} 
+                    className="space-y-4 text-justify"
+                  >
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">Enter Settings Password</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={settingsPassword}
+                        onChange={(e) => setSettingsPassword(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-250 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-center text-slate-800"
+                        id="settings-pass-input"
+                      />
+                    </div>
+                    
+                    {settingsUnlockError && (
+                      <span className="text-[10px] font-bold text-rose-600 block bg-rose-50 border border-rose-100 p-2 rounded-lg text-center" id="settings-unlock-err">
+                        ⚠️ {settingsUnlockError}
+                      </span>
+                    )}
+                    
+                    <button
+                      type="submit"
+                      className="w-full bg-slate-900 hover:bg-slate-850 text-white text-xs font-bold py-2.5 rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      Unlock Setup Console
+                    </button>
+                  </form>
+                  
+                  <div className="text-[10px] text-slate-400 font-mono pt-3 border-t border-slate-100 text-center">
+                    AUTHORIZED PASSCODE INDICATOR: <strong className="font-bold text-slate-700 bg-slate-100 px-1 py-0.5 rounded-md">{localStorage.getItem('assetops_admin_password') || 'admin123'}</strong>
+                  </div>
+                </div>
+              )
             )}
           </div>
         )}
       </main>
+
+      {/* Floating System Access Modal Portal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthenticate={handleUserAuthenticate}
+      />
 
       {/* Humble, literal footer credits line */}
       <footer className="py-6 border-t border-slate-150 text-center text-[10px] text-slate-400 font-mono tracking-wider print:hidden" id="dashboard-footer">

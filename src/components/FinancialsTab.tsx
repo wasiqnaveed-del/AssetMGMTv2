@@ -39,13 +39,14 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formAssetId, setFormAssetId] = useState('');
   const [formCategory, setFormCategory] = useState('');
-  const [formAmount, setFormAmount] = useState(0);
+  const [formAmount, setFormAmount] = useState<number | string>(0);
   const [formVendor, setFormVendor] = useState('');
   const [formInvoiceNo, setFormInvoiceNo] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formType, setFormType] = useState<Expense['Expense_Type']>('Operational');
   const [formReceiptUrl, setFormReceiptUrl] = useState('');
   const [formApprovedBy, setFormApprovedBy] = useState('');
+  const [formExpenseId, setFormExpenseId] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const todayStr = '2026-05-22';
@@ -147,7 +148,7 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
   // Filter expenses list
   const filteredExpenses = state.expenses.filter(exp => {
     const matchSearch =
-      exp.Asset_ID.toLowerCase().includes(search.toLowerCase()) ||
+      (exp.Asset_ID || '').toLowerCase().includes(search.toLowerCase()) ||
       (exp.Description || '').toLowerCase().includes(search.toLowerCase()) ||
       (exp.Vendor || '').toLowerCase().includes(search.toLowerCase()) ||
       (exp.Invoice_No || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -167,7 +168,7 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
     }
 
     const newExpense: Expense = {
-      Expense_ID: `EXP-${Math.floor(8000 + Math.random() * 999)}`,
+      Expense_ID: formExpenseId || `EXP-${Math.floor(8000 + Math.random() * 999)}`,
       Asset_ID: formAssetId,
       Date: todayStr,
       Category: formCategory || 'General Maintenance',
@@ -292,7 +293,7 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
             {topCostliestAssets.map((asset, index) => {
               const pct = Math.round((asset.cost / highestAssetCost) * 100);
               return (
-                <div key={asset.id} className="space-y-1">
+                <div key={`${asset.id || 'costly'}-${index}`} className="space-y-1">
                   <div className="flex justify-between text-xs items-center">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="font-mono text-slate-400 font-bold shrink-0">#{index + 1}</span>
@@ -352,7 +353,11 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
 
             {role === 'Admin' && (
               <button
-                onClick={() => { setSubmitError(null); setIsFormOpen(true); }}
+                onClick={() => { 
+                  setSubmitError(null); 
+                  setFormExpenseId(`EXP-${Math.floor(8000 + Math.random() * 999)}`);
+                  setIsFormOpen(true); 
+                }}
                 id="btn-add-expense"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
               >
@@ -386,8 +391,8 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
                   </td>
                 </tr>
               ) : (
-                filteredExpenses.map((exp) => (
-                  <tr key={exp.Expense_ID} className="hover:bg-slate-50/50 transition-colors">
+                filteredExpenses.map((exp, index) => (
+                  <tr key={`${exp.Expense_ID || 'exp'}-${index}`} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3.5 px-5 font-mono text-xs font-bold text-slate-900">
                       {exp.Expense_ID}
                     </td>
@@ -474,6 +479,17 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
 
               {/* Form entries */}
               <div className="space-y-4 text-xs">
+                {/* ID */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Generated Expense Ticket ID</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={formExpenseId}
+                    className="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-700 cursor-not-allowed opacity-100"
+                  />
+                </div>
+
                 {/* Target Asset */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-600">Purchase Linked Asset ID *</label>
@@ -484,8 +500,8 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
                     className="w-full p-2 border border-slate-200 rounded-lg font-mono font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     <option value="">-- Choose Asset from Master Database --</option>
-                    {state.assets.map(a => (
-                      <option key={a.Asset_ID} value={a.Asset_ID}>
+                    {state.assets.map((a, idx) => (
+                      <option key={a.Asset_ID || `asset-opt-${idx}`} value={a.Asset_ID}>
                         {a.Asset_ID} - {a.Name}
                       </option>
                     ))}
@@ -498,8 +514,8 @@ export default function FinancialsTab({ state, role, onAddExpense }: FinancialsT
                   <input
                     type="number"
                     required
-                    value={formAmount}
-                    onChange={(e) => setFormAmount(Number(e.target.value))}
+                    value={isNaN(Number(formAmount)) ? '' : formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
                     className="w-full p-2 border border-slate-200 rounded-lg font-mono font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>

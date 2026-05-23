@@ -62,14 +62,19 @@ export default function OverviewTab({ state, onNavigateToTab }: OverviewTabProps
   });
   const overdueCount = overdueSchedules.length;
 
-  const totalYtdSpend = state.expenses
-    .filter(e => e.Date.startsWith('2026'))
-    .reduce((val, e) => val + Number(e.Amount), 0) + 
-    state.maintenanceLogs
-      .filter(l => l.Date.startsWith('2026'))
-      .reduce((val, l) => val + Number(l.Total_Cost), 0);
+  const safeNum = (val: any) => {
+    const num = Number(val);
+    return isNaN(num) || !isFinite(num) ? 0 : num;
+  };
 
-  const totalAssetValue = state.assets.reduce((val, a) => val + Number(a.Current_Value), 0);
+  const totalYtdSpend = state.expenses
+    .filter(e => e.Date && String(e.Date).startsWith('2026'))
+    .reduce((val, e) => val + safeNum(e.Amount), 0) + 
+    state.maintenanceLogs
+      .filter(l => l.Date && String(l.Date).startsWith('2026'))
+      .reduce((val, l) => val + safeNum(l.Total_Cost), 0);
+
+  const totalAssetValue = state.assets.reduce((val, a) => val + safeNum(a.Current_Value), 0);
 
   const kpiList = [
     {
@@ -156,18 +161,20 @@ export default function OverviewTab({ state, onNavigateToTab }: OverviewTabProps
   });
 
   state.expenses.forEach(e => {
+    if (!e.Date) return;
     const d = new Date(e.Date);
-    if (d.getFullYear() === 2026) {
+    if (!isNaN(d.getTime()) && d.getFullYear() === 2026) {
       const m = d.getMonth() + 1;
-      if (monthlyDataMap[m]) monthlyDataMap[m].Expenses += Number(e.Amount);
+      if (monthlyDataMap[m]) monthlyDataMap[m].Expenses += safeNum(e.Amount);
     }
   });
 
   state.maintenanceLogs.forEach(l => {
+    if (!l.Date) return;
     const d = new Date(l.Date);
-    if (d.getFullYear() === 2026) {
+    if (!isNaN(d.getTime()) && d.getFullYear() === 2026) {
       const m = d.getMonth() + 1;
-      if (monthlyDataMap[m]) monthlyDataMap[m].Maintenance += Number(l.Total_Cost);
+      if (monthlyDataMap[m]) monthlyDataMap[m].Maintenance += safeNum(l.Total_Cost);
     }
   });
 
@@ -189,8 +196,9 @@ export default function OverviewTab({ state, onNavigateToTab }: OverviewTabProps
   // Let's bucket Breakdown logs by month in 2026
   const breakdownTrendData = Object.keys(monthlyDataMap).slice(0, 6).map(mKey => {
     const count = state.breakdownLogs.filter(b => {
+      if (!b.Date_Reported) return false;
       const d = new Date(b.Date_Reported);
-      return d.getFullYear() === 2026 && (d.getMonth() + 1) === Number(mKey);
+      return !isNaN(d.getTime()) && d.getFullYear() === 2026 && (d.getMonth() + 1) === Number(mKey);
     }).length;
     return {
       Month: monthlyDataMap[mKey].Month,
@@ -203,7 +211,7 @@ export default function OverviewTab({ state, onNavigateToTab }: OverviewTabProps
   const costDistributionDonutData = expenseTypes.map(type => {
     const amount = state.expenses
       .filter(e => e.Expense_Type === type)
-      .reduce((sum, e) => sum + Number(e.Amount), 0);
+      .reduce((sum, e) => sum + safeNum(e.Amount), 0);
     return { name: type, value: amount };
   }).filter(item => item.value > 0);
 

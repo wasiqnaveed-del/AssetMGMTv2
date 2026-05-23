@@ -42,12 +42,13 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
   const [formDescription, setFormDescription] = useState('');
   const [formTechnician, setFormTechnician] = useState('');
   const [formVendor, setFormVendor] = useState('');
-  const [formDuration, setFormDuration] = useState(2.0);
-  const [formLaborCost, setFormLaborCost] = useState(0);
-  const [formPartsCost, setFormPartsCost] = useState(0);
+  const [formDuration, setFormDuration] = useState<number | string>(2.0);
+  const [formLaborCost, setFormLaborCost] = useState<number | string>(0);
+  const [formPartsCost, setFormPartsCost] = useState<number | string>(0);
   const [formInvoiceNo, setFormInvoiceNo] = useState('');
   const [formStatus, setFormStatus] = useState<MaintenanceLog['Status']>('Completed');
-  const [formDowntime, setFormDowntime] = useState(0);
+  const [formDowntime, setFormDowntime] = useState<number | string>(0);
+  const [formLogId, setFormLogId] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Current operational constraints for overdue
@@ -81,7 +82,7 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
   // Filter logs list
   const filteredLogs = state.maintenanceLogs.filter(log => {
     const matchSearch = 
-      log.Asset_ID.toLowerCase().includes(search.toLowerCase()) ||
+      (log.Asset_ID || '').toLowerCase().includes(search.toLowerCase()) ||
       (log.Description || '').toLowerCase().includes(search.toLowerCase()) ||
       (log.Technician || '').toLowerCase().includes(search.toLowerCase()) ||
       (log.Vendor || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -115,7 +116,7 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
     }
 
     const newLog: MaintenanceLog = {
-      Log_ID: `MNT-${Math.floor(1000 + Math.random() * 9000)}`,
+      Log_ID: formLogId || `MNT-${Math.floor(1000 + Math.random() * 9000)}`,
       Asset_ID: formAssetId,
       Date: todayStr,
       Type: formType,
@@ -318,7 +319,11 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
 
             {role === 'Admin' && (
               <button
-                onClick={() => { setSubmitError(null); setIsFormOpen(true); }}
+                onClick={() => { 
+                  setSubmitError(null); 
+                  setFormLogId(`MNT-${Math.floor(1000 + Math.random() * 9000)}`);
+                  setIsFormOpen(true); 
+                }}
                 id="btn-log-maintenance"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
               >
@@ -436,6 +441,17 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
 
               {/* Maintenance inputs */}
               <div className="space-y-4 text-xs">
+                {/* Ticket ID */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-600">Generated Ticket ID Code</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={formLogId}
+                    className="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-700 cursor-not-allowed opacity-100"
+                  />
+                </div>
+
                 {/* Asset Select */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-600">Target Asset *</label>
@@ -446,8 +462,8 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
                     className="w-full p-2 border border-slate-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-slate-400"
                   >
                     <option value="">-- Choose Asset from Master Database --</option>
-                    {state.assets.map(a => (
-                      <option key={a.Asset_ID} value={a.Asset_ID}>
+                    {state.assets.map((a, idx) => (
+                      <option key={a.Asset_ID || `asset-opt-${idx}`} value={a.Asset_ID}>
                         {a.Asset_ID} - {a.Name} ({a.Status})
                       </option>
                     ))}
@@ -515,8 +531,8 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
                       type="number"
                       step="0.5"
                       required
-                      value={formDuration}
-                      onChange={(e) => setFormDuration(Number(e.target.value))}
+                      value={isNaN(Number(formDuration)) ? '' : formDuration}
+                      onChange={(e) => setFormDuration(e.target.value)}
                       className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono"
                     />
                   </div>
@@ -525,8 +541,8 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
                     <input
                       type="number"
                       step="0.5"
-                      value={formDowntime}
-                      onChange={(e) => setFormDowntime(Number(e.target.value))}
+                      value={isNaN(Number(formDowntime)) ? '' : formDowntime}
+                      onChange={(e) => setFormDowntime(e.target.value)}
                       className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono"
                     />
                   </div>
@@ -539,8 +555,8 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
                     <input
                       type="number"
                       required
-                      value={formLaborCost}
-                      onChange={(e) => setFormLaborCost(Number(e.target.value))}
+                      value={isNaN(Number(formLaborCost)) ? '' : formLaborCost}
+                      onChange={(e) => setFormLaborCost(e.target.value)}
                       className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono"
                     />
                   </div>
@@ -549,8 +565,8 @@ export default function MaintenanceTab({ state, role, onLogMaintenance }: Mainte
                     <input
                       type="number"
                       required
-                      value={formPartsCost}
-                      onChange={(e) => setFormPartsCost(Number(e.target.value))}
+                      value={isNaN(Number(formPartsCost)) ? '' : formPartsCost}
+                      onChange={(e) => setFormPartsCost(e.target.value)}
                       className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono"
                     />
                   </div>

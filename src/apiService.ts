@@ -51,7 +51,11 @@ export function getLocalState(): DatabaseState {
   const saved = localStorage.getItem(STATE_KEY);
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (parsed) {
+        normalizeStateKeys(parsed);
+      }
+      return parsed;
     } catch {
       // fallback
     }
@@ -73,7 +77,49 @@ export function getLocalState(): DatabaseState {
   return initialState;
 }
 
+// Robust state normalization helper to align spreadsheet and database column discrepancy
+function normalizeStateKeys(state: any) {
+  if (!state) return;
+  
+  const alignItem = (item: any) => {
+    if (!item) return;
+    if (!item.Asset_ID) {
+      item.Asset_ID = item.Asset_Tag || item.Asset_No || item.Asset_No_ || item.Asset_Number || item.Asset_Num || item.id || item.Asset_ID || '';
+    }
+    // Safeguard to make sure it's always string
+    if (item.Asset_ID !== undefined && item.Asset_ID !== null) {
+      item.Asset_ID = String(item.Asset_ID).trim();
+    }
+  };
+
+  if (Array.isArray(state.assets)) {
+    state.assets.forEach(alignItem);
+  }
+  if (Array.isArray(state.maintenanceLogs)) {
+    state.maintenanceLogs.forEach(alignItem);
+  }
+  if (Array.isArray(state.breakdownLogs)) {
+    state.breakdownLogs.forEach(alignItem);
+  }
+  if (Array.isArray(state.expenses)) {
+    state.expenses.forEach(alignItem);
+  }
+  if (Array.isArray(state.pmSchedules)) {
+    state.pmSchedules.forEach(alignItem);
+  }
+  if (Array.isArray(state.qrRegistries)) {
+    state.qrRegistries.forEach(alignItem);
+  }
+  if (Array.isArray(state.spares)) {
+    state.spares.forEach(alignItem);
+  }
+  if (Array.isArray(state.auditTrails)) {
+    state.auditTrails.forEach(alignItem);
+  }
+}
+
 export function saveLocalState(state: DatabaseState) {
+  normalizeStateKeys(state);
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
 }
 
@@ -141,8 +187,22 @@ export class AssetOpsAPI {
   // Retrieve current active user profile information
   getCurrentUser() {
     const state = getLocalState();
-    return state.users.find(u => u.Token === this.token) || {
-      Name: this.getRole() === 'Admin' ? 'System Tech Administrator' : 'Guest Operational Auditor',
+    const savedAdminUser = typeof window !== 'undefined' ? (localStorage.getItem('assetops_admin_username') || 'admin') : 'admin';
+    const formattedAdminName = savedAdminUser.charAt(0).toUpperCase() + savedAdminUser.slice(1);
+    
+    const matchedUser = state.users.find(u => u.Token === this.token);
+    if (matchedUser) {
+      if (this.token === 'EAFA2026ADMIN' && savedAdminUser !== 'admin') {
+        return {
+          ...matchedUser,
+          Name: `${formattedAdminName} (Admin)`
+        };
+      }
+      return matchedUser;
+    }
+
+    return {
+      Name: this.getRole() === 'Admin' ? `${formattedAdminName} (Admin)` : 'Guest Operational Auditor',
       Email: 'wasiq.naveed@gmail.com',
       Role: this.getRole()
     };
@@ -301,6 +361,14 @@ export class AssetOpsAPI {
       state.qrRegistries.unshift(payload);
     } else if (action === 'addSpare') {
       state.spares.unshift(payload);
+    } else if (action === 'deleteAsset') {
+      const idx = state.assets.findIndex(a => a.Asset_ID === payload.Asset_ID);
+      if (idx !== -1) {
+        auditRecord.Action = 'DELETE';
+        auditRecord.Field_Changed = 'All';
+        auditRecord.Old_Value = JSON.stringify(state.assets[idx]).substring(0, 200);
+        state.assets.splice(idx, 1);
+      }
     }
 
     state.auditTrails.unshift(auditRecord);
@@ -335,6 +403,10 @@ export class AssetOpsAPI {
 
   async saveAsset(asset: Asset): Promise<boolean> {
     return this.mutate('saveAsset', asset);
+  }
+
+  async deleteAsset(assetId: string): Promise<boolean> {
+    return this.mutate('deleteAsset', { Asset_ID: assetId });
   }
 
   async logMaintenance(log: MaintenanceLog): Promise<boolean> {
